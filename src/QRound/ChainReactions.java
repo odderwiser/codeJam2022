@@ -31,23 +31,18 @@ public class ChainReactions {
             leafs.remove(parentNode);
         }
         BigInteger value = BigInteger.valueOf(0);
-        LinkedList<Node> queue = new LinkedList<>();
-        ArrayList<Node> sortedLeafs = new ArrayList<>(leafs);
-        Collections.sort(sortedLeafs);
-        for (Node node: sortedLeafs) {
+        PriorityQueue<Node> sortedLeafs = new PriorityQueue<>(leafs);
+        while (!sortedLeafs.isEmpty()) {
+            Node node = sortedLeafs.remove();
             if (!node.parent.visited) {
                 node.parent.visited = true;
-                value = value.add( handleParent(node.parent,queue));
+                value = value.add( handleParent(node.parent,sortedLeafs));
             }
-        }
-        while(!queue.isEmpty()){
-            Node node = queue.removeFirst();
-            value = value.add( handleParent(node,queue));
         }
         System.out.println("Case #"+caseNum+": "+value);
     }
 
-    public static BigInteger handleParent(Node node, LinkedList<Node> queue) { //node is the child now
+    public static BigInteger handleParent(Node node, Collection<Node> queue) { //node is the child now
         BigInteger value = BigInteger.valueOf(0);
         Node smallest = Collections.min(node.children, Comparator.comparingInt(o -> o.value));
         node.children.remove(smallest);
@@ -58,10 +53,11 @@ public class ChainReactions {
             if (smallest.value > node.value) {
                 node.parent.children.remove(node);
                 node.parent.children.add(smallest);
+                smallest.height--;
             }
             if (!node.parent.visited) {
-                queue.addFirst(node.parent);
-                node.parent.visited = true;
+                queue.add(node);
+                //node.parent.visited = true;
             }
         } else {
             value = value.add(BigInteger.valueOf(smallest.value));
