@@ -2,7 +2,6 @@ package QRound;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class ChainReactions {
 
@@ -31,77 +30,65 @@ public class ChainReactions {
             node.setParent(parentNode);
             leafs.remove(parentNode);
         }
-        //getting potential parents part
-        for (Node node : leafs) {
-            node.findHighestValue();
-        }
-        long totalValue = 0;
-        while (!leafs.isEmpty()) {
-            for (int i = 0; i < tree.size(); i++) {
-                //trivial case
-                Node node = tree.get(i);
-                if (node.potentialChildren.size()== 1) {
-                    Node child = node.potentialChildren.get(0);
-                    leafs.remove(child);
-                    totalValue+=node.value;
-                    node.value = 0;
-                } else if (node.potentialChildren.size() > 1){
-
-                }
-
+        BigInteger value = BigInteger.valueOf(0);
+        LinkedList<Node> queue = new LinkedList<>();
+        ArrayList<Node> sortedLeafs = new ArrayList<>(leafs);
+        Collections.sort(sortedLeafs);
+        for (Node node: sortedLeafs) {
+            if (!node.parent.visited) {
+                node.parent.visited = true;
+                value = value.add( handleParent(node.parent,queue));
             }
         }
+        while(!queue.isEmpty()){
+            Node node = queue.removeFirst();
+            value = value.add( handleParent(node,queue));
+        }
+        System.out.println("Case #"+caseNum+": "+value);
     }
 
-    public static long nonTrivial(Node parent, HashSet<Node> leafs, ArrayList<Node> tree) {
-        long totalValue = 0;
-        if (parent.potentialChildren.size() == 1) {
-            Node child = parent.potentialChildren.get(0);
-            leafs.remove(child);
-            totalValue+=parent.value;
-            parent.value = 0;
-            return totalValue;
+    public static BigInteger handleParent(Node node, LinkedList<Node> queue) { //node is the child now
+        BigInteger value = BigInteger.valueOf(0);
+        Node smallest = Collections.min(node.children, Comparator.comparingInt(o -> o.value));
+        node.children.remove(smallest);
+        for (Node child : node.children) {
+            value = value.add(BigInteger.valueOf(child.value));
         }
-        HashSet<Node> otherParents = new HashSet<>();
-        for (Node node : parent.potentialChildren) {
-            node.potentialParents.remove(parent);
-            Node otherParent = Collections.max(node.potentialParents);
-            node
+        if (node.parent != null) {
+            if (smallest.value > node.value) {
+                node.parent.children.remove(node);
+                node.parent.children.add(smallest);
+            }
+            if (!node.parent.visited) {
+                queue.addFirst(node.parent);
+                node.parent.visited = true;
+            }
+        } else {
+            value = value.add(BigInteger.valueOf(smallest.value));
         }
-        while (otherParents.size() > 1)
-
+        return value;
     }
 
     public static class Node implements Comparable<Node> {
         Node parent;
         int value;
         int id;
-        ArrayList<Node> potentialChildren = new ArrayList<>();
-        HashSet<Node> potentialParents;
+        HashSet<Node> children;
+        boolean visited;
+        int height;
 
         public Node(int value, int id) {
             this.value = value;
             this.id = id;
+            this.visited = false;
+            this.children = new HashSet<>();
+            this.height = 0;
         }
 
         public void setParent(Node other) {
             this.parent = other;
-        }
-
-        public void findHighestValue() {
-            potentialParents = new HashSet<>();
-            Node newParent = this;
-            Node highestParent = this;
-            potentialParents.add(this);
-            while (newParent.parent != null) {
-                newParent = newParent.parent;
-                potentialParents.add(newParent);
-                if (newParent.value > highestParent.value) {
-                    highestParent = newParent;
-                }
-            }
-            //Collections.sort(potentialParents, Comparator.comparingInt(o -> o.value));
-            highestParent.potentialChildren.add(this);
+            other.children.add(this);
+            this.height = other.height+1;
         }
 
         @Override
@@ -119,7 +106,11 @@ public class ChainReactions {
 
         @Override
         public int compareTo(Node o) {
-            return this.value - o.value;
+            int i =  o.height - this.height;
+            if (i == 0) {
+                return this.id - o.id;
+            }
+            return i;
         }
     }
 }
